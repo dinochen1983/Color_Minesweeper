@@ -6,4 +6,8 @@
 
 > Figure：color minesweeper cap screen image
 
-Latest update on 2025-04-20.
+🙌 Support the Project If you enjoy the game and would like to support future development, donations are welcome:
+
+Bitcoin (BTC): 1HCw5WKJAJTH82MYHt4fc33zXGPeA8o3vA
+
+Latest update on 2025-04-23.
