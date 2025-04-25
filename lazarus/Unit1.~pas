@@ -1,0 +1,342 @@
+unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, MATH, MMSystem;
+
+
+type TGRID=RECORD
+NUMBER:INTEGER;
+BOMB:INTEGER;  //0: NO BOMB  1: BOMB;
+FLAG:INTEGER;  //0: NO FLAG  1: FLAG;
+COVER:INTEGER;  //0 COVER 1: REVEAL
+END;
+
+
+type
+  TForm1 = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Button1: TButton;
+    Label2: TLabel;
+    Label1: TLabel;
+    procedure Button1Click(Sender: TObject);
+    procedure Image1MouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    PROCEDURE DRAW_GRID;
+    PROCEDURE DRAW_BOMB;
+    PROCEDURE FILL(I,J:INTEGER);
+
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+  GRID:ARRAY OF ARRAY OF TGRID;
+  SIZE:INTEGER;
+  BMP1,BMP2,BMP3:TBITMAP;
+
+implementation
+
+{$R *.dfm}
+{$R MYRC.RES}
+
+procedure TForm1.Button1Click(Sender: TObject);
+VAR I,J:INTEGER;
+WX,WY:DOUBLE;
+AX,AY,BX,BY:INTEGER;
+PX,PY:INTEGER;
+KNUM:INTEGER;
+begin
+//
+LABEL2.Font.Color:=CLBLACK;
+LABEL2.Caption:='MINE SWEEPER';
+IMAGE1.Enabled:=TRUE;
+SIZE:=10;
+SETLENGTH(GRID,SIZE+2,SIZE+2);
+RANDOMIZE;
+FOR I:=0 TO SIZE+1 DO
+ FOR J:=0 TO SIZE+1 DO
+ BEGIN
+   GRID[I,J].BOMB:=0;
+   GRID[I,J].COVER:=0;
+ END;
+
+FOR I:=1 TO SIZE DO
+ FOR J:=1 TO SIZE DO
+ BEGIN
+   GRID[I,J].FLAG:=0;
+   GRID[I,J].NUMBER:=0;
+   GRID[I,J].BOMB:=ROUND(RANDOM*0.66);
+ END;
+/////////////////////////////////
+ IMAGE1.Canvas.Rectangle(0,0,IMAGE1.Width,IMAGE1.Height);
+ WX:=IMAGE1.Width/SIZE;
+ WY:=IMAGE1.Height/SIZE;
+ IMAGE1.Canvas.Brush.Style:=BSCLEAR;
+ FOR I:=1 TO SIZE DO
+   FOR J:=1 TO SIZE DO
+   BEGIN
+      AX:=ROUND(WX*(I-1));  AY:=ROUND(WY*(J-1));
+      BX:=ROUND(WX*(I));  BY:=ROUND(WY*(J));
+      IMAGE1.Canvas.Rectangle(AX,AY,BX,BY);
+   END;
+
+////////////////////////////////////////////////////////////////////////////////
+ FOR I:=1 TO SIZE DO
+ FOR J:=1 TO SIZE DO
+ BEGIN
+   KNUM:=0;
+   IF GRID[I-1,J-1].BOMB=1 THEN KNUM:=KNUM+1;
+   IF GRID[I  ,J-1].BOMB=1 THEN KNUM:=KNUM+1;
+   IF GRID[I+1,J-1].BOMB=1 THEN KNUM:=KNUM+1;
+   IF GRID[I-1,J  ].BOMB=1 THEN KNUM:=KNUM+1;
+   IF GRID[I+1,J  ].BOMB=1 THEN KNUM:=KNUM+1;
+   IF GRID[I-1,J+1].BOMB=1 THEN KNUM:=KNUM+1;
+   IF GRID[I  ,J+1].BOMB=1 THEN KNUM:=KNUM+1;
+   IF GRID[I+1,J+1].BOMB=1 THEN KNUM:=KNUM+1;
+   GRID[I,J].NUMBER:=KNUM;
+ END;
+ FOR I:=1 TO SIZE DO
+ FOR J:=1 TO SIZE DO
+ BEGIN
+   IF GRID[I,J].BOMB=1 THEN GRID[I,J].NUMBER:=0;
+ END;
+
+IMAGE1.Canvas.FONT.Name:='Showcard Gothic';
+IMAGE1.Canvas.Font.Size:=16;
+IMAGE1.Canvas.Font.Style:=[FSBOLD];
+IMAGE1.Canvas.Brush.Color:=CLGRAY;
+IMAGE1.Canvas.Brush.Style:=BSSOLID;
+////////////////////////////////////////////////////////////////////////////////
+ FOR I:=1 TO SIZE DO
+   FOR J:=1 TO SIZE DO
+   BEGIN
+      AX:=ROUND(WX*(I-1));  AY:=ROUND(WY*(J-1));
+      BX:=ROUND(WX*(I));  BY:=ROUND(WY*(J));
+     IMAGE1.Canvas.Draw(AX,AY,BMP1);
+   //   PX:=ROUND(WX*(I-0.5));  PY:=ROUND(WY*(J-0.5));
+   //   IMAGE1.Canvas.TextOut(PX-5,PY-8,INTTOSTR(GRID[I,J].NUMBER));
+   END;
+//////////////////////////////
+
+
+
+end;
+
+procedure TForm1.Image1MouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+VAR KI,KJ:INTEGER;
+WX,WY:DOUBLE;
+KNUM:INTEGER;
+GNUM:INTEGER;
+I,J:INTEGER;
+begin
+   //
+   //
+   WX:=IMAGE1.Width/SIZE;
+   WY:=IMAGE1.Height/SIZE;
+   KI:=FLOOR(X/WX)+1;
+   KJ:=FLOOR(Y/WY)+1;
+   //
+   IF BUTTON=MBLEFT THEN
+   BEGIN
+   IF GRID[KI,KJ].COVER=0 THEN
+   BEGIN
+    FILL(KI,KJ);
+    DRAW_GRID;
+   END;
+   //
+   IF GRID[KI,KJ].BOMB=1 THEN
+   BEGIN
+   DRAW_BOMB;
+   IMAGE1.Enabled:=FALSE;
+   END;
+   END;
+   //
+   IF BUTTON=MBRIGHT THEN
+   BEGIN
+    APPLICATION.ProcessMessages;
+    sndPlaySound('k1.wav',  SND_NODEFAULT);
+    GRID[KI,KJ].FLAG:=(GRID[KI,KJ].FLAG+1)MOD 2;
+    DRAW_GRID;
+   END;
+   //
+   KNUM:=0;     GNUM:=0;
+   FOR I:=1 TO SIZE DO
+   FOR J:=1 TO SIZE DO
+   BEGIN
+     IF (GRID[I,J].FLAG=1) THEN
+     BEGIN
+      KNUM:=KNUM+1;
+     END;
+     IF (GRID[I,J].BOMB=1)  THEN
+     BEGIN
+      GNUM:=GNUM+1;
+     END;
+
+   END;
+
+
+   //
+   IF GNUM=KNUM THEN
+   BEGIN
+   LABEL2.Font.Color:=CLBLUE;
+   LABEL2.Caption:='YOU WON THE GAME!!';
+   APPLICATION.ProcessMessages;
+   sndPlaySound('k3.wav',  SND_NODEFAULT);
+   END;
+
+   LABEL1.Caption:=FORMAT('BOMBS = %D, FLAGS = %D',[GNUM,KNUM]);
+
+end;
+
+
+PROCEDURE TFORM1.DRAW_BOMB;
+VAR I,J:INTEGER;
+WX,WY:DOUBLE;
+AX,AY,BX,BY:INTEGER;
+PX,PY:INTEGER;
+KNUM:INTEGER;
+BEGIN
+ DRAW_GRID;
+
+ WX:=IMAGE1.Width/SIZE;
+ WY:=IMAGE1.Height/SIZE;
+
+ FOR I:=1 TO SIZE DO
+   FOR J:=1 TO SIZE DO
+   BEGIN
+      IF GRID[I,J].BOMB=1 THEN
+      BEGIN
+      PX:=ROUND(WX*(I-1));  PY:=ROUND(WY*(J-1));
+      IMAGE1.Canvas.Brush.Color:=CLYELLOW;
+      IMAGE1.Canvas.Draw(PX,PY,BMP2);
+      END;
+   END;
+ //
+  LABEL2.Font.Color:=CLRED;
+  LABEL2.Caption:='GAME OVER!!!';
+  application.processmessages;
+  sndPlaySound('k2.wav',  SND_NODEFAULT);
+
+END;
+
+
+PROCEDURE TFORM1.FILL(I,J:INTEGER);
+BEGIN
+  IF (I<>0) AND (I<>SIZE+1) AND (J<>0) AND (J<>SIZE+1)  THEN
+  BEGIN
+  IF (GRID[I,J].BOMB=0) AND (GRID[I,J].COVER=0) AND (GRID[I,J].NUMBER<2) THEN
+   BEGIN
+   GRID[I,J].COVER:=1;
+   FILL(I,J+1);
+   FILL(I,J-1);
+   FILL(I+1,J);
+   FILL(I-1,J);
+   END;
+  IF (GRID[I,J].NUMBER>=2) THEN
+   BEGIN
+   GRID[I,J].COVER:=1;
+   END;
+  END;
+END;
+
+
+
+
+
+
+
+PROCEDURE TFORM1.DRAW_GRID;
+VAR I,J:INTEGER;
+WX,WY:DOUBLE;
+AX,AY,BX,BY:INTEGER;
+PX,PY:INTEGER;
+KNUM:INTEGER;
+BEGIN
+ LABEL2.FONT.Color:=CLBLACK;
+ LABEL2.Caption:='MINE SWEEPER';
+ IMAGE1.Canvas.Rectangle(0,0,IMAGE1.Width,IMAGE1.Height);
+ WX:=IMAGE1.Width/SIZE;
+ WY:=IMAGE1.Height/SIZE;
+ FOR I:=1 TO SIZE DO
+   FOR J:=1 TO SIZE DO
+   BEGIN
+      AX:=ROUND(WX*(I-1));  AY:=ROUND(WY*(J-1));
+      BX:=ROUND(WX*(I));  BY:=ROUND(WY*(J));
+      IMAGE1.Canvas.Rectangle(AX,AY,BX,BY);
+   END;
+ //
+ IMAGE1.Canvas.Brush.Color:=CLGRAY;
+ IMAGE1.Canvas.Pen.Color:=CLBLACK;
+ FOR I:=1 TO SIZE DO
+   FOR J:=1 TO SIZE DO
+   BEGIN
+      IMAGE1.Canvas.Brush.Color:=CLGRAY;
+      IMAGE1.Canvas.Brush.Style:=BSSOLID;
+      IF GRID[I,J].COVER=0 THEN
+      BEGIN
+      AX:=ROUND(WX*(I-1));  AY:=ROUND(WY*(J-1));
+      BX:=ROUND(WX*(I));  BY:=ROUND(WY*(J));
+      IMAGE1.Canvas.Draw(AX,AY,BMP1);
+      END;
+
+      IMAGE1.Canvas.Brush.Color:=CLRED;
+      IF GRID[I,J].FLAG=1 THEN
+      BEGIN
+      AX:=ROUND(WX*(I-1));  AY:=ROUND(WY*(J-1));
+      IMAGE1.Canvas.Draw(AX,AY,BMP3);
+      END;
+
+      IMAGE1.Canvas.Brush.Color:=CLGRAY;
+      IF GRID[I,J].COVER=1 THEN
+      BEGIN
+      AX:=ROUND(WX*(I-1));  AY:=ROUND(WY*(J-1));
+      BX:=ROUND(WX*(I));  BY:=ROUND(WY*(J));
+      IMAGE1.Canvas.Rectangle(AX,AY,BX,BY);
+      PX:=ROUND(WX*(I-0.5));  PY:=ROUND(WY*(J-0.5));
+      IMAGE1.Canvas.Rectangle(AX,AY,BX,BY);
+      IMAGE1.Canvas.TextOut(PX-5,PY-14,INTTOSTR(GRID[I,J].NUMBER));
+      END;
+      //
+   END;
+
+
+
+
+END;
+
+
+
+
+
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+BMP1:=TBITMAP.Create;
+BMP2:=TBITMAP.Create;
+BMP3:=TBITMAP.Create;
+BMP1.LoadFromResourceName(HInstance,'BMP1');
+//BMP1.LoadFromFile('BMP1.BMP');
+BMP2.LoadFromFile('BMP2.BMP');
+BMP3.LoadFromFile('BMP3.BMP');
+//
+BUTTON1.Click;
+end;
+
+procedure TForm1.FormDestroy(Sender: TObject);
+begin
+BMP1.Free;
+BMP2.Free;
+BMP3.Free;
+end;
+
+end.
